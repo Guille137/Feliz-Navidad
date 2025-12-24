@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¡Feliz Navidad! | GS.dev</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;500&family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        window.tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        mono: ['"Fira Code"', 'monospace'],
+                        sans: ['"Outfit"', 'sans-serif'],
+                    },
+                    colors: {
+                        'code-bg': '#1e1e1e',
+                        'code-blue': '#569cd6',
+                        'code-green': '#6a9955',
+                        'code-orange': '#ce9178',
+                        'code-purple': '#c586c0',
+                        'gold': '#ffd700',
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'shine': 'shine 2s infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        shine: {
+                            '0%': { opacity: 0.5 },
+                            '50%': { opacity: 1 },
+                            '100%': { opacity: 0.5 },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background: #0f172a;
+            overflow-x: hidden;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0;
+            transition: opacity 1s ease;
+            pointer-events: none;
+        }
+
+        .bg-main {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+        }
+
+        /* Nieve */
+        .snowflake {
+            position: fixed;
+            top: -10%;
+            color: #fff;
+            z-index: 5;
+            user-select: none;
+            cursor: default;
+            animation-name: snowflakes-fall, snowflakes-shake;
+            animation-duration: 10s, 3s;
+            animation-timing-function: linear, ease-in-out;
+            animation-iteration-count: infinite;
+        }
+
+        @keyframes snowflakes-fall { 0% { top: -10%; } 100% { top: 100%; } }
+        @keyframes snowflakes-shake { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(80px); } }
+
+        .snowflake:nth-of-type(0){left:1%;animation-delay:0s,0s}.snowflake:nth-of-type(1){left:10%;animation-delay:1s,1s}.snowflake:nth-of-type(2){left:20%;animation-delay:6s,.5s}.snowflake:nth-of-type(3){left:30%;animation-delay:4s,2s}.snowflake:nth-of-type(4){left:40%;animation-delay:2s,2s}.snowflake:nth-of-type(5){left:50%;animation-delay:8s,3s}.snowflake:nth-of-type(6){left:60%;animation-delay:6s,2s}.snowflake:nth-of-type(7){left:70%;animation-delay:2.5s,1s}.snowflake:nth-of-type(8){left:80%;animation-delay:1s,0s}.snowflake:nth-of-type(9){left:90%;animation-delay:3s,1.5s}
+
+        /* Glassmorphism Card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .syntax-highlighter { line-height: 1.6; }
+        
+        .cursor::after {
+            content: '|';
+            animation: blink 1s infinite;
+            color: #ffd700;
+        }
+        
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        .glow-image {
+            box-shadow: 0 0 20px rgba(86, 156, 214, 0.4);
+            transition: transform 0.3s ease;
+        }
+        .glow-image:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(86, 156, 214, 0.6);
+        }
+
+        /* Modal Styles */
+        #celebration-modal {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        #celebration-modal.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        /* Fade-in animation for terminal lines */
+        .terminal-line {
+            opacity: 0;
+            transform: translateY(5px);
+            transition: all 0.5s ease;
+        }
+        .terminal-line.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div class="bg-main"></div>
+    <canvas id="matrix-canvas"></canvas>
+
+    <!-- Audio Element -->
+    <audio id="bg-music" loop>
+        <source src="https://www.chosic.com/wp-content/uploads/2021/11/Jingle-Bells-Piano.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- Copos de Nieve -->
+    <div class="snowflakes" aria-hidden="true">
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+    </div>
+
+    <!-- Contenedor Principal -->
+    <main id="main-card" class="w-full max-w-lg glass-card rounded-2xl p-1 animate-float relative z-10 transition-all duration-500">
+        <!-- Barra de título estilo VS Code -->
+        <div class="flex items-center gap-2 px-4 py-3 bg-black/20 rounded-t-xl border-b border-white/5">
+            <div class="flex gap-2">
+                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+            </div>
+            <div class="ml-4 font-mono text-xs text-gray-400 flex items-center gap-1">
+                <span>christmas_card.js</span>
+            </div>
+        </div>
+
+        <!-- Contenido de la tarjeta -->
+        <div class="p-6 md:p-8 flex flex-col items-center text-center">
+            
+            <!-- Logo Container -->
+            <div class="mb-6 relative group">
+                <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur opacity-50 group-hover:opacity-100 transition duration-1000"></div>
+                <div class="relative w-28 h-28 md:w-32 md:h-32 rounded-full overflow-hidden border-2 border-white/20 glow-image bg-gray-900 flex items-center justify-center">
+                    <img src="Logo-GS.dev.png" 
+                         alt="GS.dev Logo" 
+                         class="w-full h-full object-cover"
+                         onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=GS+Dev&background=0D8ABC&color=fff&size=128';">
+                </div>
+                <div class="absolute bottom-0 right-1 bg-code-bg border border-code-blue rounded-full p-1.5 shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"></path></svg>
+                </div>
+            </div>
+
+            <h1 class="text-3xl md:text-4xl font-bold text-white mb-2 font-sans tracking-tight">
+                ¡Feliz <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Navidad!</span>
+            </h1>
+            
+            <div class="font-mono text-xs text-code-blue mb-6 opacity-80">&lt;Developer /&gt;</div>
+
+            <!-- Mensaje estilo código -->
+            <div class="w-full bg-black/40 rounded-lg p-5 text-left font-mono text-sm md:text-base border border-white/5 mb-8 shadow-inner relative overflow-hidden">
+                <div class="absolute left-0 top-0 bottom-0 w-8 bg-white/5 border-r border-white/5 flex flex-col items-center pt-5 text-xs text-gray-600 select-none">
+                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+                </div>
+                
+                <div class="pl-6 syntax-highlighter">
+                    <div>
+                        <span class="text-code-purple">const</span> 
+                        <span class="text-blue-300">message</span> 
+                        <span class="text-white">=</span> 
+                        <span class="text-gold">{</span>
+                    </div>
+                    <div class="pl-4 text-gray-300 py-2">
+                        <span class="text-code-orange">"En esta Navidad quiero agradecer a quienes confiaron en mi trabajo, a los clientes que me eligen cada mes, a mi familia y amigos por su apoyo constante."</span>
+                    </div>
+                    <div class="pl-4 pt-1">
+                        <span class="text-code-purple">return</span>
+                        <span class="text-code-green">"¡Que estas fiestas estén llenas de alegría, paz y esperanza!"</span>;
+                    </div>
+                    <div class="text-gold">};</div>
+                    
+                    <div class="mt-3 text-gray-500 text-xs italic">
+                        console.log(<span class="text-code-orange cursor">"¡Feliz Navidad!"</span>);
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="startCelebration()" id="action-btn" class="group relative px-8 py-4 font-bold text-white transition-all duration-300 bg-blue-600 rounded-full hover:bg-blue-500 hover:scale-105 active:scale-95 focus:outline-none shadow-xl">
+                <span class="flex items-center gap-2 relative z-10">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-bounce"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                    Ejecutar deseos
+                </span>
+                <div class="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 blur-lg opacity-20 group-hover:opacity-40 transition-opacity"></div>
+            </button>
+            
+            <div class="mt-8 text-xs text-gray-500 font-mono">
+                &copy; 2025 GS.dev | Desarrollado por Guillermo Sanchez.
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Sorpresa -->
+    <div id="celebration-modal" class="fixed inset-0 z-50 items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="bg-code-bg border border-white/10 w-full max-w-sm rounded-xl overflow-hidden shadow-2xl transform scale-95 transition-transform">
+            <div class="bg-white/5 px-4 py-2 border-b border-white/5 flex justify-between items-center">
+                <span class="text-xs font-mono text-gray-400">status_report.exe</span>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-white">✕</button>
+            </div>
+            <div class="p-6 font-mono text-sm" id="terminal-content">
+                <div class="text-blue-400 mb-2 terminal-line" id="line-1">&gt; Inicializando protocolos navideños...</div>
+                <div class="text-green-400 mb-2 terminal-line" id="line-2">&gt; Sincronizando deseos con la base de datos... OK</div>
+                <div class="text-purple-400 mb-4 terminal-line" id="line-3">&gt; Desplegando a Papa Noel... 100%</div>
+                
+                <div class="bg-black/40 p-3 rounded border border-green-900/30 text-center terminal-line" id="line-4">
+                    <div class="text-gold text-lg mb-1">¡Deploy Complete!</div>
+                    <p class="text-gray-400 text-xs">Tus deseos para estas navidades serán cumplidos.</p>
+                </div>
+
+                <button onclick="closeModal()" class="w-full mt-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded transition-colors border border-white/10 terminal-line" id="line-5">
+                    Cerrar Terminal
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+        // --- MATRIX EFFECT ---
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height, columns;
+        const fontSize = 16;
+        const chars = "❅❆01GSDEV*+";
+        let drops = [];
+
+        function initMatrix() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            columns = Math.floor(width / fontSize);
+            drops = Array(columns).fill(1);
+        }
+
+        function drawMatrix() {
+            ctx.fillStyle = "rgba(15, 23, 42, 0.05)";
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.fillStyle = "#4ade80"; 
+            ctx.font = fontSize + "px monospace";
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = chars.charAt(Math.floor(Math.random() * chars.length));
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        let matrixInterval;
+
+        // --- CELEBRATION LOGIC ---
+        async function startCelebration() {
+            // 1. Activar Música
+            const audio = document.getElementById('bg-music');
+            if (audio) {
+                audio.play().catch(e => console.log("Audio play prevented by browser policy. Interaction needed."));
+            }
+
+            // 2. Activar Matrix
+            initMatrix();
+            canvas.style.opacity = "0.6";
+            if (!matrixInterval) matrixInterval = setInterval(drawMatrix, 50);
+
+            // 3. Confeti masivo
+            if (typeof confetti === 'function') {
+                const duration = 5 * 1000;
+                const end = Date.now() + duration;
+
+                (function frame() {
+                    confetti({
+                        particleCount: 3,
+                        angle: 60,
+                        spread: 55,
+                        origin: { x: 0 },
+                        colors: ['#569cd6', '#ffd700', '#ffffff']
+                    });
+                    confetti({
+                        particleCount: 3,
+                        angle: 120,
+                        spread: 55,
+                        origin: { x: 1 },
+                        colors: ['#c586c0', '#ffd700', '#ffffff']
+                    });
+
+                    if (Date.now() < end) {
+                        requestAnimationFrame(frame);
+                    }
+                }());
+            }
+
+            // 4. Reset terminal lines and show modal
+            const lines = document.querySelectorAll('.terminal-line');
+            lines.forEach(line => line.classList.remove('show'));
+
+            const modal = document.getElementById('celebration-modal');
+            if(modal) {
+                modal.classList.add('active');
+                const inner = modal.querySelector('div');
+                if(inner) inner.style.transform = "scale(1)";
+            }
+
+            // 5. Mostrar líneas progresivamente
+            for (let i = 1; i <= lines.length; i++) {
+                await new Promise(r => setTimeout(r, 600)); // Retardo entre líneas
+                const line = document.getElementById(`line-${i}`);
+                if (line) line.classList.add('show');
+            }
+
+            // 6. Feedback en el botón
+            const btn = document.getElementById('action-btn');
+            if(btn) btn.innerHTML = `<span class="flex items-center gap-2 text-green-300">¡Feliz Navidad!</span>`;
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('celebration-modal');
+            if(modal) modal.classList.remove('active');
+        }
+
+        window.addEventListener('resize', initMatrix);
+        
+        window.addEventListener('load', () => {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#569cd6', '#ffffff']
+                });
+            }
+        });
+    </script>
+</body>
+</html>
